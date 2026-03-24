@@ -1,5 +1,7 @@
 # Skill 开发规范规则
 
+> 基于 [Agent Skills Specification](https://agentskills.io/specification) 制定
+
 ## 1. 目录结构规范
 
 ### 必选文件
@@ -8,7 +10,7 @@
 ### 可选目录
 | 目录 | 用途 | 说明 |
 |------|------|------|
-| `scripts/` | 可执行脚本 | Python、Bash等脚本 |
+| `scripts/` | 可执行脚本 | Python、Bash、JavaScript等脚本 |
 | `references/` | 参考文档 | 按需加载的详细文档 |
 | `assets/` | 资源文件 | 模板、图片、字体等 |
 
@@ -19,8 +21,10 @@
 - `QUICK_REFERENCE.md`
 - `TODO.md`
 - `NOTES.md`
+- `HISTORY.md`
+- `CONTRIBUTING.md`
 
-**原因**: Skill不应包含辅助文档，所有必要信息应在SKILL.md中。
+**原因**: Skill应自包含，SKILL.md应包含所有必要信息。
 
 ## 2. Frontmatter规范
 
@@ -32,25 +36,32 @@ description: 技能描述（包含功能和使用场景）
 ---
 ```
 
-### 可选字段
-- `license` - 许可证类型
-- `allowed-tools` - 允许使用的工具列表
-- `metadata` - 元数据对象
+### 可选字段 (agentskills.io规范)
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `license` | string | 许可证类型 |
+| `compatibility` | string/list | 兼容性说明 |
+| `metadata` | object | 扩展元数据 |
+| `allowed-tools` | string/list | 允许使用的工具 |
 
 ### 禁止字段
 除上述字段外，禁止使用其他YAML字段。
 
 ## 3. 命名规范
 
-### name字段规则
-- **字符**: 小写字母(a-z)、数字(0-9)、连字符(-)
+### name字段规则 (agentskills.io)
+- **字符**: Unicode小写字母(a-z)、数字(0-9)、连字符(-)
 - **格式**: hyphen-case (如 `my-skill-name`)
-- **长度**: 最大64字符
+- **长度**: 1-64字符
 - **禁止**:
-  - 开头或结尾使用连字符
+  - 开头或结尾使用连字符 (`-skill`, `skill-`)
   - 连续连字符 (`--`)
   - 大写字母
   - 下划线或其他特殊字符
+
+### 目录名一致性
+- 目录名应与 `name` 字段匹配
+- 如果不匹配会触发警告
 
 ### 示例
 | 合法 | 非法 |
@@ -58,14 +69,16 @@ description: 技能描述（包含功能和使用场景）
 | `my-skill` | `My-Skill` |
 | `skill-v2` | `skill_v2` |
 | `pdf-editor` | `pdfEditor` |
+| `-pdf` | `pdf--processing` |
 
 ## 4. Description规范
 
 ### 内容要求
-- **长度**: 最大1024字符
+- **长度**: 20-1024字符
 - **必须包含**:
   1. 功能描述 - 技能做什么
-  2. 触发场景 - 何时使用
+  2. 触发场景 - 何时使用 (建议包含触发词)
+- **格式**: 使用 "Use when...", "Handle...", "When the user..." 等
 
 ### 禁止内容
 - HTML标签 `<` `>`
@@ -74,23 +87,34 @@ description: 技能描述（包含功能和使用场景）
 ### 良好示例
 ```yaml
 description: >
-  Skill规范检查工具。扫描并验证skill是否符合开发规范，
-  输出诊断报告及修复建议。触发场景：检查skill、验证规范、
-  扫描skill目录、诊断报告、skill质量评估。
+  Extract text and tables from PDF files, fill forms, merge documents.
+  Use when working with PDF files, need to extract data, or merge PDFs.
 ```
 
 ## 5. 内容质量规范
 
-### 长度控制
+### 长度控制 (agentskills.io)
 - **SKILL.md正文**: 建议不超过500行
+- **Token数**: 建议不超过5000 tokens
 - **参考文件**: 大文件(>200行)应拆分
 
-### 渐进式披露
+### 渐进式披露 (Progressive Disclosure)
 将详细信息移到 `references/` 目录，SKILL.md只保留核心流程。
+
+| 层级 | 内容 | 何时加载 |
+|------|------|----------|
+| 1. Catalog | name + description | 会话开始 |
+| 2. Instructions | SKILL.md body | skill激活时 |
+| 3. Resources | scripts/references/assets | 需要时 |
 
 ### 代码示例
 - 使用真实代码而非伪代码
 - 包含必要的边界情况处理
+
+### 结构建议
+- 长内容建议添加 ## 章节标题
+- 使用步骤式说明
+- 提供输入输出示例
 
 ## 6. 资源文件规范
 
@@ -103,11 +127,12 @@ description: >
 - 文件名使用kebab-case
 - 大文件添加目录索引
 - 避免深层嵌套
+- 避免使用 `REFERENCE.md` 这样的通用名
 
 ### Assets
 - 只包含必要文件
+- 大文件(>5MB)应警告
 - 使用通用格式
-- 注明来源和许可证
 
 ## 7. 检查级别
 
@@ -126,16 +151,30 @@ description: >
 | 50-69 | C | 一般，存在错误需修复 |
 | 0-49 | F | 不合格，需要重大修复 |
 
-## 9. 常见问题
+## 9. 兼容性
+
+本规范基于 Agent Skills 官方规范，支持以下客户端:
+- Claude Code
+- Cursor
+- OpenAI Codex
+- Gemini CLI
+- VS Code
+- GitHub Copilot
+- 以及其他支持 Agent Skills 的客户端
+
+## 10. 常见问题
 
 ### Q: 为什么不能有README.md?
-A: Skill是自包含的，SKILL.md应包含所有必要信息。额外文档增加维护负担且容易被忽视。
+A: Skill是自包含的，SKILL.md应包含所有必要信息。
 
 ### Q: 何时使用references/?
-A: 当SKILL.md超过200行时，应拆分详细信息到references/。
+A: 当SKILL.md超过200行或5000 tokens时，应拆分详细信息到references/。
 
 ### Q: 描述可以多长?
-A: 最大1024字符。简洁描述更有价值。
+A: 20-1024字符。简洁描述更有价值。
 
 ### Q: 如何选择name?
 A: 使用功能相关的简短名称，用连字符分隔。如 `pdf-editor`、`git-helper`。
+
+### Q: 什么是渐进式披露?
+A: 一种分层加载策略：先加载name+description，再加载完整SKILL.md，最后按需加载references/。

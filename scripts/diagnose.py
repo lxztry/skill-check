@@ -9,11 +9,12 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import List, Dict
-import re
-import yaml
 
-sys.path.insert(0, str(Path(__file__).parent))
-from skill_check import check_skill, ALLOWED_FRONTMATTER_PROPS, FORBIDDEN_FILES, ALLOWED_DIRS
+script_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(script_dir))
+
+from skill_check.checker import check_skill
+
 
 @dataclass
 class DiagnosticReport:
@@ -23,6 +24,7 @@ class DiagnosticReport:
     summary: dict
     details: Dict[str, List] = field(default_factory=dict)
     fixes: List[dict] = field(default_factory=list)
+
 
 def generate_diagnosis_report(skill_path: Path) -> DiagnosticReport:
     skill_path = Path(skill_path)
@@ -45,15 +47,51 @@ def generate_diagnosis_report(skill_path: Path) -> DiagnosticReport:
             "frontmatter": [],
             "naming": [],
             "content": [],
-            "resources": []
+            "resources": [],
+            "progressive": []
         },
         fixes=[]
     )
 
     for issue in result.issues:
         category = issue.category.lower()
-        if category in report.details:
-            report.details[category].append({
+        if "structure" in category:
+            report.details["structure"].append({
+                "level": issue.level,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line
+            })
+        elif "frontmatter" in category or "metadata" in category:
+            report.details["frontmatter"].append({
+                "level": issue.level,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line
+            })
+        elif "naming" in category:
+            report.details["naming"].append({
+                "level": issue.level,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line
+            })
+        elif "content" in category or "body" in category:
+            report.details["content"].append({
+                "level": issue.level,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line
+            })
+        elif "resources" in category or "script" in category or "reference" in category:
+            report.details["resources"].append({
+                "level": issue.level,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line
+            })
+        else:
+            report.details["progressive"].append({
                 "level": issue.level,
                 "message": issue.message,
                 "file": issue.file,
@@ -64,6 +102,7 @@ def generate_diagnosis_report(skill_path: Path) -> DiagnosticReport:
         report.fixes.append({"suggestion": suggestion})
 
     return report
+
 
 def format_text_report(report: DiagnosticReport) -> str:
     score_bar = "█" * (report.summary["score"] // 10) + "░" * (10 - report.summary["score"] // 10)
@@ -93,7 +132,8 @@ def format_text_report(report: DiagnosticReport) -> str:
         "frontmatter": "📝 Frontmatter (元数据)",
         "naming": "🏷️  Naming (命名规范)",
         "content": "📄 Content (内容质量)",
-        "resources": "📦 Resources (资源文件)"
+        "resources": "📦 Resources (资源文件)",
+        "progressive": "📚 Progressive Disclosure (渐进式披露)"
     }
 
     for cat, title in categories.items():
@@ -103,7 +143,7 @@ def format_text_report(report: DiagnosticReport) -> str:
             lines.append("─" * 50)
             for issue in issues:
                 icon = {"ERROR": "❌", "WARN": "⚠️", "INFO": "ℹ️"}.get(issue["level"], "•")
-                loc = f" → {issue['file']}" if issue["file"] else ""
+                loc = f" → {issue['file']}" if issue['file'] else ""
                 lines.append(f"  {icon} {issue['level']:<7} {issue['message']}{loc}")
 
     if report.fixes:
@@ -118,6 +158,7 @@ def format_text_report(report: DiagnosticReport) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
 
 def format_markdown_report(report: DiagnosticReport) -> str:
     status_icon = "✅" if report.summary["passed"] else "❌"
@@ -160,6 +201,7 @@ def format_markdown_report(report: DiagnosticReport) -> str:
 
     return "\n".join(lines)
 
+
 def format_json_report(report: DiagnosticReport) -> str:
     import json
     return json.dumps({
@@ -170,6 +212,7 @@ def format_json_report(report: DiagnosticReport) -> str:
         "details": report.details,
         "fixes": report.fixes
     }, indent=2, ensure_ascii=False)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Skill诊断报告生成器")
@@ -198,6 +241,7 @@ def main():
         print(f"✅ Report saved to: {args.output}")
     else:
         print(output)
+
 
 if __name__ == "__main__":
     main()
