@@ -69,6 +69,28 @@ class Config:
 
 def load_config(config_path: Optional[Path] = None) -> Config:
     """加载配置文件"""
+    import re
+    
+    def try_load_yaml(path: Path) -> Optional[Dict]:
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+            return data if data else None
+        except Exception:
+            return None
+    
+    def try_load_markdown(path: Path) -> Optional[Dict]:
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if match:
+                data = yaml.safe_load(match.group(1))
+                return data if data else None
+        except Exception:
+            pass
+        return None
+    
     search_paths = []
     
     if config_path:
@@ -76,22 +98,26 @@ def load_config(config_path: Optional[Path] = None) -> Config:
     
     script_dir = Path(__file__).parent
     search_paths.append(script_dir / 'config.yaml')
+    search_paths.append(script_dir / 'config.md')
     
-    home_config = Path.home() / '.skill-check' / 'config.yaml'
-    search_paths.append(home_config)
+    home_config = Path.home() / '.skill-check'
+    search_paths.append(home_config / 'config.yaml')
+    search_paths.append(home_config / 'config.md')
     
-    current_dir = Path.cwd() / '.skill-check.yaml'
-    search_paths.append(current_dir)
+    current_dir = Path.cwd()
+    search_paths.append(current_dir / '.skill-check.yaml')
+    search_paths.append(current_dir / '.skill-check.md')
+    search_paths.append(current_dir / '.skill-check.yml')
+    search_paths.append(current_dir / '.skill-check')
     
     for path in search_paths:
-        if path.exists():
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    data = yaml.safe_load(f)
-                if data:
-                    return Config.from_dict(data)
-            except Exception:
-                pass
+        if path.exists() and path.is_file():
+            if path.suffix == '.md':
+                data = try_load_markdown(path)
+            else:
+                data = try_load_yaml(path)
+            if data:
+                return Config.from_dict(data)
     
     return Config()
 
