@@ -1,0 +1,78 @@
+# Skill Check 配置文件
+# 放置在 skill-check 目录或用户主目录 ~/.skill-check/config.yaml
+
+# 允许的 frontmatter 字段
+allowed_frontmatter_fields:
+  - name
+  - description
+  - license
+  - compatibility
+  - metadata
+  - allowed-tools
+
+# 禁止的文件
+forbidden_files:
+  - README.md
+  - CHANGELOG.md
+  - INSTALLATION_GUIDE.md
+  - QUICK_REFERENCE.md
+  - TODO.md
+  - NOTES.md
+  - HISTORY.md
+  - CONTRIBUTING.md
+
+# 允许的目录
+allowed_dirs:
+  - scripts
+  - references
+  - assets
+
+# 忽略的目录（不视为非标准目录）
+ignored_dirs:
+  - .git
+  - __pycache__
+  - .pytest_cache
+  - .tox
+  - node_modules
+  - .venv
+  - venv
+  - env
+  - skill_check
+
+# 校验规则
+rules:
+  # name 最大长度
+  max_name_length: 64
+  
+  # description 最小/最大长度
+  min_description_length: 20
+  max_description_length: 1024
+  
+  # body 最大行数
+  max_body_lines: 500
+  
+  # body 最大 token 数
+  max_body_tokens: 5000
+  
+  # 参考文件最大行数
+  max_reference_lines: 200
+  
+  # 大文件阈值 (MB)
+  large_file_threshold_mb: 5
+
+# 触发词（用于检查 description 是否包含触发场景提示）
+trigger_words:
+  - when
+  - use
+  - if
+  - need
+  - ask
+  - want
+  - handle
+  - work with
+  # 中文
+  - 使用
+  - 用于
+  - 适用于
+  - 场景
+  - 触发

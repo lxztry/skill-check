@@ -13,16 +13,23 @@ from typing import List, Optional, Dict, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-ALLOWED_FRONTMATTER_PROPS: Set[str] = {'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'}
-FORBIDDEN_FILES: Set[str] = {'README.md', 'CHANGELOG.md', 'INSTALLATION_GUIDE.md', 'QUICK_REFERENCE.md', 'TODO.md', 'NOTES.md', 'HISTORY.md', 'CONTRIBUTING.md'}
-ALLOWED_DIRS: Set[str] = {'scripts', 'references', 'assets'}
-IGNORED_DIRS: Set[str] = {'.git', '__pycache__', '.pytest_cache', '.tox', 'node_modules', '.venv', 'venv', 'env', 'skill_check'}
+from skill_check.config import load_config, Config
+
+config: Optional[Config] = None
+
+def get_config() -> Config:
+    """获取当前配置"""
+    global config
+    if config is None:
+        config = load_config()
+    return config
+
+def set_config(cfg: Config):
+    """设置配置"""
+    global config
+    config = cfg
+
 SKILL_MD_NAME: str = "SKILL.md"
-MAX_NAME_LENGTH: int = 64
-MAX_DESCRIPTION_LENGTH: int = 1024
-MIN_DESCRIPTION_LENGTH: int = 20
-MAX_BODY_LINES: int = 500
-MAX_BODY_TOKENS: int = 5000
 
 
 @dataclass
@@ -51,6 +58,7 @@ class CheckResult:
 
 
 def check_file_structure(skill_path: Path, auto_fix: bool = False) -> CheckResult:
+    cfg = get_config()
     result = CheckResult(
         skill_name=skill_path.name,
         skill_path=str(skill_path),
@@ -66,7 +74,7 @@ def check_file_structure(skill_path: Path, auto_fix: bool = False) -> CheckResul
 
     for item in skill_path.iterdir():
         if item.is_file():
-            if item.name in FORBIDDEN_FILES:
+            if item.name in cfg.forbidden_files:
                 result.add_issue(
                     "ERROR", "Structure",
                     f"Forbidden file: {item.name}",
@@ -76,13 +84,13 @@ def check_file_structure(skill_path: Path, auto_fix: bool = False) -> CheckResul
                 if auto_fix:
                     item.unlink()
         elif item.is_dir():
-            if item.name in IGNORED_DIRS:
+            if item.name in cfg.ignored_dirs:
                 pass
-            elif item.name not in ALLOWED_DIRS:
+            elif item.name not in cfg.allowed_dirs:
                 result.add_issue(
                     "WARN", "Structure",
                     f"Non-standard directory: {item.name}",
-                    fix=f"Use only: {', '.join(sorted(ALLOWED_DIRS))}"
+                    fix=f"Use only: {', '.join(sorted(cfg.allowed_dirs))}"
                 )
             elif not any(item.iterdir()):
                 result.add_issue(
@@ -97,6 +105,7 @@ def check_file_structure(skill_path: Path, auto_fix: bool = False) -> CheckResul
 
 
 def check_frontmatter(skill_md: Path, result: CheckResult, auto_fix: bool = False):
+    cfg = get_config()
     content = skill_md.read_text(encoding='utf-8')
 
     if not content.startswith('---'):
@@ -121,13 +130,13 @@ def check_frontmatter(skill_md: Path, result: CheckResult, auto_fix: bool = Fals
         result.add_issue("ERROR", "Frontmatter", f"Invalid YAML: {e}", file=SKILL_MD_NAME, fix="Fix YAML syntax errors")
         return None
 
-    unexpected_keys = set(frontmatter.keys()) - ALLOWED_FRONTMATTER_PROPS
+    unexpected_keys = set(frontmatter.keys()) - set(cfg.allowed_frontmatter_fields)
     if unexpected_keys:
         result.add_issue(
             "ERROR", "Frontmatter",
             f"Unexpected keys: {', '.join(sorted(unexpected_keys))}",
             file=SKILL_MD_NAME,
-            fix=f"Allowed keys: {', '.join(sorted(ALLOWED_FRONTMATTER_PROPS))}"
+            fix=f"Allowed keys: {', '.join(sorted(cfg.allowed_frontmatter_fields))}"
         )
 
     if 'name' not in frontmatter:
@@ -147,9 +156,9 @@ def check_frontmatter(skill_md: Path, result: CheckResult, auto_fix: bool = Fals
         elif name.startswith('-') or name.endswith('-') or '--' in name:
             result.passed = False
             result.add_issue("ERROR", "Naming", f"Invalid name format: '{name}'", file=SKILL_MD_NAME, fix="Name cannot start/end with hyphen or contain consecutive hyphens")
-        elif len(name) > MAX_NAME_LENGTH:
+        elif len(name) > cfg.rules['max_name_length']:
             result.passed = False
-            result.add_issue("ERROR", "Naming", f"Name too long ({len(name)} > {MAX_NAME_LENGTH} chars)", file=SKILL_MD_NAME, fix=f"Shorten name to {MAX_NAME_LENGTH} characters or less")
+            result.add_issue("ERROR", "Naming", f"Name too long ({len(name)} > {cfg.rules['max_name_length']} chars)", file=SKILL_MD_NAME, fix=f"Shorten name to {cfg.rules['max_name_length']} characters or less")
         result.skill_name = name
 
         if result.skill_name != skill_md.parent.name and result.skill_name:
@@ -173,11 +182,11 @@ def check_frontmatter(skill_md: Path, result: CheckResult, auto_fix: bool = Fals
             if auto_fix:
                 fixed_desc = desc.replace('<', '').replace('>', '')
                 frontmatter['description'] = fixed_desc
-        if len(desc) > MAX_DESCRIPTION_LENGTH:
-            result.add_issue("WARN", "Frontmatter", f"Description too long ({len(desc)} > {MAX_DESCRIPTION_LENGTH} chars)", file=SKILL_MD_NAME, fix=f"Truncate description to {MAX_DESCRIPTION_LENGTH} characters or less")
+        if len(desc) > cfg.rules['max_description_length']:
+            result.add_issue("WARN", "Frontmatter", f"Description too long ({len(desc)} > {cfg.rules['max_description_length']} chars)", file=SKILL_MD_NAME, fix=f"Truncate description to {cfg.rules['max_description_length']} characters or less")
             if auto_fix:
-                frontmatter['description'] = desc[:MAX_DESCRIPTION_LENGTH]
-        if len(desc) < MIN_DESCRIPTION_LENGTH:
+                frontmatter['description'] = desc[:cfg.rules['max_description_length']]
+        if len(desc) < cfg.rules['min_description_length']:
             result.add_issue("WARN", "Frontmatter", "Description too short (less than 20 chars)", file=SKILL_MD_NAME, fix="Expand description to at least 20 characters")
 
         if not re.search(r'(when|use|if|need|ask|want|handle|work with|使用|用于|适用于|场景|触发)', desc, re.IGNORECASE):
@@ -209,6 +218,7 @@ def check_frontmatter(skill_md: Path, result: CheckResult, auto_fix: bool = Fals
 
 
 def check_content_quality(skill_md: Path, result: CheckResult, auto_fix: bool = False):
+    cfg = get_config()
     content = skill_md.read_text(encoding='utf-8')
     lines = content.split('\n')
 
@@ -219,8 +229,8 @@ def check_content_quality(skill_md: Path, result: CheckResult, auto_fix: bool = 
             break
 
     body_lines = len(lines) - body_start
-    if body_lines > MAX_BODY_LINES:
-        result.add_issue("WARN", "Content", f"SKILL.md body too long ({body_lines} lines)", file=SKILL_MD_NAME, fix=f"Keep SKILL.md under {MAX_BODY_LINES} lines, move details to references/")
+    if body_lines > cfg.rules['max_body_lines']:
+        result.add_issue("WARN", "Content", f"SKILL.md body too long ({body_lines} lines)", file=SKILL_MD_NAME, fix=f"Keep SKILL.md under {cfg.rules['max_body_lines']} lines, move details to references/")
 
     empty_lines = sum(1 for line in lines if not line.strip())
     if empty_lines > len(lines) * 0.3:
@@ -228,10 +238,10 @@ def check_content_quality(skill_md: Path, result: CheckResult, auto_fix: bool = 
 
     body_content = '\n'.join(lines[body_start:])
     token_estimate = len(body_content.split()) * 1.3
-    if token_estimate > MAX_BODY_TOKENS:
+    if token_estimate > cfg.rules['max_body_tokens']:
         result.add_issue(
             "WARN", "Content",
-            f"Body content ~{int(token_estimate)} tokens (recommended < {MAX_BODY_TOKENS})",
+            f"Body content ~{int(token_estimate)} tokens (recommended < {cfg.rules['max_body_tokens']})",
             file=SKILL_MD_NAME,
             fix="Move detailed content to references/ for progressive disclosure"
         )
@@ -248,6 +258,7 @@ def check_content_quality(skill_md: Path, result: CheckResult, auto_fix: bool = 
 
 
 def check_resources(skill_path: Path, result: CheckResult, auto_fix: bool = False):
+    cfg = get_config()
     scripts_dir = skill_path / "scripts"
     if scripts_dir.exists():
         for script in scripts_dir.iterdir():

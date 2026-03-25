@@ -12,9 +12,9 @@ script_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(script_dir))
 
 from skill_check.checker import (
-    check_skill, scan_directory, format_report, format_summary,
-    ALLOWED_FRONTMATTER_PROPS, FORBIDDEN_FILES, ALLOWED_DIRS
+    check_skill, scan_directory, format_report, format_summary, set_config
 )
+from skill_check.config import load_config
 
 
 def main():
@@ -30,6 +30,7 @@ def main():
   %(prog)s ./my-skill -q           # 安静模式(仅摘要)
   %(prog)s ./my-skill -v           # 详细模式(含等级)
   %(prog)s ./my-skill --json       # JSON输出
+  %(prog)s ./my-skill --config ./custom-config.yaml  # 使用自定义配置
         """
     )
 
@@ -42,9 +43,16 @@ def main():
     parser.add_argument("--concurrent", "-c", action="store_true", help="并发扫描(多skill时)")
     parser.add_argument("--workers", "-w", type=int, default=4, help="并发工作线程数(默认4)")
     parser.add_argument("--output", "-o", help="输出到文件")
-    parser.add_argument("--version", action="version", version="Skill Check v2.0.0")
+    parser.add_argument("--config", help="配置文件路径")
+    parser.add_argument("--version", action="version", version="Skill Check v2.1.0")
 
     args = parser.parse_args()
+
+    if args.config:
+        cfg = load_config(Path(args.config))
+    else:
+        cfg = load_config()
+    set_config(cfg)
 
     path = Path(args.path)
     results = []
