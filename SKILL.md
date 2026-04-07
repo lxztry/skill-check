@@ -242,6 +242,63 @@ python scripts/migrate.py ./skills --from v1 --to v2 --scan --apply
 
 ---
 
+## 🧪 测试框架 (test_runner.py)
+
+运行时验证 Skill 的功能正确性。
+
+### 使用示例
+
+```bash
+# 测试单个 Skill
+python scripts/test_runner.py ./my-skill
+
+# 测试所有 Skills
+python scripts/test_runner.py ./skills --scan
+
+# JSON 输出
+python scripts/test_runner.py ./my-skill --json
+```
+
+### 测试项目
+
+| 测试 | 说明 |
+|------|------|
+| structure | 目录结构检查 |
+| frontmatter | 必选字段检查 |
+| naming | 命名规范检查 |
+| description | 描述质量检查 |
+| trigger_words | 触发词检查 |
+| content_length | 内容长度检查 |
+| no_html | HTML 标签检查 |
+| scripts_shebang | 脚本 shebang 检查 |
+| references_naming | 引用文件命名检查 |
+
+---
+
+## 🔌 VS Code 插件
+
+在编辑器中集成 Skill 检查和创建功能。
+
+### 安装
+
+```bash
+cd vscode-extension
+npm install
+npm run compile
+npx vsce package
+code --install-extension skill-check-1.0.0.vsix
+```
+
+### 命令
+
+| 命令 | 说明 |
+|------|------|
+| `Skill Check: 检查当前 Skill` | 检查光标所在的 Skill |
+| `Skill Check: 检查所有 Skills` | 扫描工作区检查所有 Skills |
+| `Skill Check: 创建新 Skill` | 从模板创建新 Skill |
+
+---
+
 ## 📁 项目结构
 
 ```

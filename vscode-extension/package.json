@@ -1,0 +1,77 @@
+{
+  "name": "skill-check",
+  "displayName": "Skill Check",
+  "description": "AI Skill 工程化规范检查工具 - Validate AI skills against specification",
+  "version": "1.0.0",
+  "publisher": "lxztry",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other",
+    "Linters",
+    "Development"
+  ],
+  "activationEvents": [
+    "onCommand:skill-check.checkSkill",
+    "onCommand:skill-check.checkWorkspace",
+    "onCommand:skill-check.createSkill"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "skill-check.checkSkill",
+        "title": "Skill Check: 检查当前 Skill",
+        "category": "Skill Check"
+      },
+      {
+        "command": "skill-check.checkWorkspace",
+        "title": "Skill Check: 检查所有 Skills",
+        "category": "Skill Check"
+      },
+      {
+        "command": "skill-check.createSkill",
+        "title": "Skill Check: 创建新 Skill",
+        "category": "Skill Check"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "skill-check.checkSkill",
+          "when": "resourcePath =~ /skills/",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Skill Check",
+      "properties": {
+        "skillCheck.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python 解释器路径"
+        },
+        "skillCheck.scriptPath": {
+          "type": "string",
+          "default": "",
+          "description": "skill-check 脚本目录路径（可选）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "python": "^0.0.1"
+  }
+}
