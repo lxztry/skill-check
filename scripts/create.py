@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Skill Scaffold - Create new skills from templates
 """
@@ -7,7 +8,6 @@ import os
 import sys
 import argparse
 import re
-import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List
@@ -87,20 +87,20 @@ def create_skill(skill_name: str, template: str, output_dir: Path, force: bool =
     # Validate name
     valid, error = validate_name(skill_name)
     if not valid:
-        print(f"❌ Invalid skill name: {error}")
+        print(f"[FAIL] Invalid skill name: {error}")
         return False
     
     # Check template exists
     template_path = TEMPLATES_DIR / template
     if not template_path.exists():
-        print(f"❌ Template not found: {template}")
+        print(f"[FAIL] Template not found: {template}")
         print(f"   Available templates: {', '.join(list_templates())}")
         return False
     
     # Check output directory
     skill_dir = output_dir / skill_name
     if skill_dir.exists() and not force:
-        print(f"❌ Skill already exists: {skill_dir}")
+        print(f"[FAIL] Skill already exists: {skill_dir}")
         print(f"   Use --force to overwrite")
         return False
     
@@ -110,18 +110,18 @@ def create_skill(skill_name: str, template: str, output_dir: Path, force: bool =
     # Copy template files
     copied_files = copy_template_dir(template_path, skill_dir, skill_name)
     
-    print(f"✅ Created skill: {skill_name}")
+    print(f"[OK] Created skill: {skill_name}")
     print(f"   Template: {template}")
     print(f"   Location: {skill_dir}")
-    print(f"\n📁 Files created:")
+    print(f"\n[DIR] Files created:")
     for f in sorted(copied_files):
         print(f"   - {f}")
     
-    print(f"\n📝 Next steps:")
+    print(f"\n[NOTE] Next steps:")
     print(f"   1. cd {skill_dir}")
     print(f"   2. Edit SKILL.md with your skill description")
     print(f"   3. Customize scripts/ and references/ as needed")
-    print(f"   4. Run: python {script_dir}/scripts/skill_check.py {skill_dir}")
+    print(f"   4. Run: py {script_dir}/scripts/skill_check.py {skill_dir}")
     
     return True
 
@@ -166,7 +166,7 @@ Template types:
     
     if args.list_templates:
         templates = list_templates()
-        print("📦 Available templates:")
+        print("[Templates] Available templates:")
         for t in sorted(templates):
             desc = TEMPLATE_MAP.get(t, t)
             print(f"   - {t}")
